@@ -21,6 +21,8 @@ export interface MessengerWebAppProviderOptions {
   readonly maxAgeSeconds?: number
 }
 
+const DEFAULT_WEBAPP_MAX_AGE_SECONDS = 60 * 60 * 24
+
 interface MessengerWebAppUser {
   readonly id: string
   readonly firstName?: string
@@ -75,7 +77,10 @@ export function normalizeMessengerWebAppProviderOptions(
     throw invalidInput('Messenger provider clock must provide now().')
   }
 
-  return options
+  return {
+    ...options,
+    maxAgeSeconds: options.maxAgeSeconds ?? DEFAULT_WEBAPP_MAX_AGE_SECONDS,
+  }
 }
 
 function isClock(value: unknown): value is Clock {

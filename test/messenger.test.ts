@@ -161,11 +161,13 @@ describe('messenger WebApp providers', () => {
     expect(assertion.displayName).toBe('Max User')
   })
 
-  it('accepts direct MAX init data and keeps metadata optional', async () => {
-    const provider = createMaxWebAppProvider({ botToken })
-    const initData = signInitData({
-      user: JSON.stringify({ id: 100, username: 'fallback_name' }),
-    })
+  it('accepts direct MAX init data and includes freshness metadata', async () => {
+    const provider = createMaxWebAppProvider({ botToken, clock: { now: () => now } })
+    const initData = signInitData(
+      validFields({
+        user: JSON.stringify({ id: 100, username: 'fallback_name' }),
+      }),
+    )
     const assertion = await provider.finish({ payload: initData })
 
     expect(provider.id).toBe(MAX_WEBAPP_PROVIDER_ID)
@@ -174,42 +176,57 @@ describe('messenger WebApp providers', () => {
       providerUserId: '100',
       displayName: 'fallback_name',
       metadata: {
+        authDate: now.toISOString(),
+        queryId: 'query-1',
+        startParam: 'launch',
         username: 'fallback_name',
       },
     })
   })
 
   it('omits display metadata when signed user data has only an id', async () => {
-    const provider = createTelegramMiniAppProvider({ botToken })
+    const provider = createTelegramMiniAppProvider({ botToken, clock: { now: () => now } })
     const assertion = await provider.finish({
-      payload: signInitData({ user: JSON.stringify({ id: 'user-only-id' }) }),
+      payload: signInitData(validFields({ user: JSON.stringify({ id: 'user-only-id' }) })),
     })
 
     expect(assertion).toEqual({
       provider: TELEGRAM_MINI_APP_PROVIDER_ID,
       providerUserId: 'user-only-id',
+      metadata: {
+        authDate: now.toISOString(),
+        queryId: 'query-1',
+        startParam: 'launch',
+      },
     })
   })
 
   it('trims signed user display fields and omits blank profile metadata', async () => {
-    const provider = createTelegramMiniAppProvider({ botToken })
+    const provider = createTelegramMiniAppProvider({ botToken, clock: { now: () => now } })
     const assertion = await provider.finish({
-      payload: signInitData({
-        user: JSON.stringify({
-          id: '  trimmed-user-id  ',
-          first_name: '  Trimmed  ',
-          last_name: ' User ',
-          username: '   ',
-          language_code: '',
-          photo_url: '   ',
+      payload: signInitData(
+        validFields({
+          user: JSON.stringify({
+            id: '  trimmed-user-id  ',
+            first_name: '  Trimmed  ',
+            last_name: ' User ',
+            username: '   ',
+            language_code: '',
+            photo_url: '   ',
+          }),
         }),
-      }),
+      ),
     })
 
     expect(assertion).toEqual({
       provider: TELEGRAM_MINI_APP_PROVIDER_ID,
       providerUserId: 'trimmed-user-id',
       displayName: 'Trimmed User',
+      metadata: {
+        authDate: now.toISOString(),
+        queryId: 'query-1',
+        startParam: 'launch',
+      },
     })
   })
 
@@ -240,6 +257,16 @@ describe('messenger WebApp providers', () => {
       validateSignedWebAppInitData({
         initData: `${initData}&hash=${'1'.repeat(64)}`,
         botToken,
+      }),
+    )
+  })
+
+  it('applies a default WebApp auth_date max age in providers', async () => {
+    const provider = createTelegramMiniAppProvider({ botToken, clock: { now: () => now } })
+
+    await expectInvalid(() =>
+      provider.finish({
+        payload: signInitData(validFields({ auth_date: '1' })),
       }),
     )
   })
@@ -381,13 +408,13 @@ describe('messenger WebApp providers', () => {
   })
 
   it('rejects blank WebAppData values in MAX URL fragments', async () => {
-    const provider = createMaxWebAppProvider({ botToken })
+    const provider = createMaxWebAppProvider({ botToken, clock: { now: () => now } })
 
     await expectInvalid(() => provider.finish({ payload: 'WebAppData=&WebAppPlatform=web' }))
   })
 
   it('rejects invalid MAX WebAppData URL fragments', async () => {
-    const provider = createMaxWebAppProvider({ botToken })
+    const provider = createMaxWebAppProvider({ botToken, clock: { now: () => now } })
 
     await expectInvalid(() => provider.finish({ payload: 'https://example.com' }))
     await expectInvalid(() =>
@@ -396,11 +423,13 @@ describe('messenger WebApp providers', () => {
   })
 
   it('accepts MAX raw fragment payloads without a full URL', async () => {
-    const initData = signInitData({
-      start_param: 'contains-WebAppData=value',
-      user: JSON.stringify({ user_id: 777, first_name: 'Raw' }),
-    })
-    const provider = createMaxWebAppProvider({ botToken })
+    const initData = signInitData(
+      validFields({
+        start_param: 'contains-WebAppData=value',
+        user: JSON.stringify({ user_id: 777, first_name: 'Raw' }),
+      }),
+    )
+    const provider = createMaxWebAppProvider({ botToken, clock: { now: () => now } })
     const assertion = await provider.finish({
       payload: `WebAppData=${encodeURIComponent(initData)}&WebAppPlatform=web`,
     })
