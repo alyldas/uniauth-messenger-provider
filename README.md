@@ -1,5 +1,7 @@
 # UniAuth Messenger Provider
 
+[![GitHub Packages](https://img.shields.io/static/v1?label=GitHub%20Packages&message=%40alyldas%2Funiauth-messenger-provider&color=24292f&logo=github)](https://github.com/users/alyldas/packages/npm/package/uniauth-messenger-provider)
+
 `@alyldas/uniauth-messenger-provider` contains SDK-free UniAuth provider adapters for signed
 messenger WebApp launch data:
 
@@ -15,6 +17,14 @@ This package does not own bot setup, frontend bridge code, HTTP routes, cookies,
 storage, or UI.
 
 ## Install
+
+Configure the GitHub Packages registry for the package scope before installing:
+
+```ini
+@alyldas:registry=https://npm.pkg.github.com
+```
+
+GitHub Packages can require authentication for package reads. Use a token with `read:packages` in local npm config or CI secrets; do not commit tokens.
 
 ```bash
 npm install @alyldas/uniauth-core @alyldas/uniauth-messenger-provider
